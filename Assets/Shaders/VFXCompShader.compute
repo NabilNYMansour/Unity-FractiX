@@ -1,0 +1,11 @@
+#pragma kernel CSMain
+
+RWTexture2D<float4> Result;
+uniform float _normalizedForce;
+
+[numthreads(8, 8, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    float gamma = 1.2;
+    Result[id.xy] = pow(abs(Result[id.xy]), (1. / gamma));
+}

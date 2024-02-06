@@ -1,0 +1,46 @@
+#pragma kernel CSMain
+
+RWTexture2D<float4> Result;
+
+[numthreads(8,8,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    int width, height;
+    Result.GetDimensions(width, height);
+
+    int x = id.x;
+    int y = id.y;
+
+    // Fetch color samples
+    float4 colorLeft = Result[clamp(int2(x - 1, y), int2(0, 0), int2(width - 1, height - 1))];
+    float4 colorRight = Result[clamp(int2(x + 1, y), int2(0, 0), int2(width - 1, height - 1))];
+    float4 colorTop = Result[clamp(int2(x, y - 1), int2(0, 0), int2(width - 1, height - 1))];
+    float4 colorBottom = Result[clamp(int2(x, y + 1), int2(0, 0), int2(width - 1, height - 1))];
+    float4 colorCenter = Result[id.xy];
+
+    // Calculate luma values
+    float lumaLeft = dot(colorLeft.rgb, float3(0.299, 0.587, 0.114));
+    float lumaRight = dot(colorRight.rgb, float3(0.299, 0.587, 0.114));
+    float lumaTop = dot(colorTop.rgb, float3(0.299, 0.587, 0.114));
+    float lumaBottom = dot(colorBottom.rgb, float3(0.299, 0.587, 0.114));
+    float lumaCenter = dot(colorCenter.rgb, float3(0.299, 0.587, 0.114));
+
+    // Calculate local contrast
+    float4 contrast = abs(colorCenter - colorLeft) + abs(colorCenter - colorRight);
+    contrast += abs(colorCenter - colorTop) + abs(colorCenter - colorBottom);
+
+    // Determine the subpixel shift direction
+    float2 subpixelShift;
+    subpixelShift.x = -sign(lumaRight - lumaCenter) * 0.5;
+    subpixelShift.y = -sign(lumaBottom - lumaCenter) * 0.5;
+
+    // Calculate the subpixel offset
+    float2 subpixelOffset = subpixelShift / float2(width, height);
+
+    // Calculate the final color
+    float4 finalColor = (colorCenter * 0.5) + (colorLeft + colorRight + colorTop + colorBottom) * 0.125;
+    finalColor += subpixelOffset.xyxy * contrast * (1.0 / 8.0);
+
+    // Write the final color to the output texture
+    Result[id.xy] = finalColor;
+}

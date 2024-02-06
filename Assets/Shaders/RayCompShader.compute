@@ -1,0 +1,226 @@
+//---------------Kernal init---------------//
+#pragma kernel CSMain
+
+//---------------Camera uniforms---------------//
+uniform float _camTanFov;
+uniform float _camAspect;
+uniform float3 _camForward;
+
+uniform float3 _camPos;
+uniform float4x4 _camProjMat;
+uniform float4x4 _camInvProjMat;
+uniform float4x4 _camWorldToCamMat;
+uniform float4x4 _camToWorldMat;
+
+//---------------Light uniforms---------------//
+uniform float _LightCamSize;
+uniform float4x4 _LightWorldToCamMat;
+uniform float _LightNear;
+uniform float _LightFar;
+uniform float3 _LightDir;
+
+//---------------Color uniforms---------------//
+uniform float3 _FOG_COLOR_GROUND;
+uniform float3 _FOG_COLOR_SKY;
+uniform float3 _SUN_COLOR;
+
+//---------------Settings uniforms---------------//
+uniform float MAX_STEPS;
+uniform float MAX_DIS;
+uniform float HIT_EPS;
+uniform float SLOPE_EPS;
+
+uniform float SHADOW_DETAIL;
+uniform float MAX_SHADOW_STEPS;
+uniform float RAYMARCH_DETAIL;
+
+uniform bool SHADOWS_ON;
+uniform bool AO_ON;
+
+//---------------Buffers---------------//
+RWTexture2D<float4> Result;
+
+//---------------Cone Marching uniforms and declarations---------------//
+RWTexture2D<float> ConeMarchData;
+uniform float finalPixelDiv;
+
+//---------------Declarations---------------//
+Texture2D<float4> UnityRendered;
+Texture2D<float> SkyboxRendered;
+Texture2D<float4> UIRendered;
+
+RWTexture2D<float> DepthBuffer;
+Texture2D<half4> _CameraDepthTexture;
+
+Texture2D<half4> LightCameraDepthTexture;
+SamplerState sampler_LightCameraDepthTexture;
+
+//---------------Includes---------------//
+#include "UnityCG.cginc"
+#include "marcher.hlsl" // will use some uniforms defined above
+
+//---------------Poly Evaluator---------------//
+float3 GetPosFromID(uint2 id, float width, float height)
+{
+    float2 uv = id.xy / float2(width, height) * 2 - 1;
+    float depth = LinearEyeDepth(_CameraDepthTexture[id]);
+
+    float3 ro = mul(_camToWorldMat, float4(0, 0, 0, 1)).xyz;
+    float3 rd = mul(_camInvProjMat, float4(uv, 0, 1.)).xyz;
+    rd = mul(_camToWorldMat, float4(rd, 0)).xyz;
+
+    return ro + depth * rd;
+}
+float3 GetPolyNormal(uint2 id, float width, float height) {
+    float3 p = GetPosFromID(id, width, height);
+    float3 pL = GetPosFromID(id + uint2(1, 0), width, height);
+    float3 pU = GetPosFromID(id + uint2(0, 1), width, height);
+
+    return normalize(-cross(pL - p, pU - p));
+}
+float GetDepthTextureSample(float2 uv) {
+    return LightCameraDepthTexture.SampleLevel(sampler_LightCameraDepthTexture, uv, 0) * (_LightFar - _LightNear);
+}
+
+//---------------Coloring---------------//
+float GetAmbientOcclusion(float3 hp, float3 n, float stride, int stepsNum) {
+    float AO = 0.;
+    float disAmbient;
+    for (int i = 1; i <= stepsNum; ++i) {
+        disAmbient = stride * i;
+        AO = max(0., (disAmbient - GetDis(hp + n * disAmbient)) / disAmbient);
+    }
+    return (1. - AO);
+}
+float GetDiffuse(float3 hp, float dotNL) {
+    float Diff = clamp(dotNL, 0., 1.);
+    return Diff;
+}
+float GetSpecular(float hardness, float Diffuse) {
+    return pow(Diffuse, hardness);
+}
+float GetFog(float dE, float maxDis, float intensity) {
+    return pow(dE / maxDis, intensity);
+}
+bool isShadow(float3 hp, float3 l) {
+    March lightMarching = RayMarch(0, hp, l, MAX_DIS, MAX_SHADOW_STEPS, SHADOW_DETAIL); // no shadows with polygons
+    if (lightMarching.dE < MAX_DIS) {
+        return true;
+    }
+    return false;
+}
+struct Render {
+    float3 color;
+    float depth;
+};
+Render GetRayMarchRender(float startDis, float2 id, float width, float height, float3 ro, float3 rd, float depth, float3 backgroundCol, float3 sunboxCol) {
+    //======|Render init|======//
+    Render r;
+
+    //======|RayMarch|======//
+    float3 rdn = normalize(rd);
+    depth = depth * length(rd) + HIT_EPS * 2.; // to normalize and remove z fighting
+    March m = RayMarch(startDis, ro, rdn, depth, MAX_STEPS, RAYMARCH_DETAIL); // use normalized ray 
+    r.depth = m.dE;
+
+    //======|Intensities init|======//
+    float Di = 1.;
+    float Ai = .1;
+    float Si = 0.25;
+
+    //======|Extract point data|======//
+    float3 hp = ro + m.dE * rdn;
+
+    //======|Get fog color|======//
+    float3 fogColor = lerp(_FOG_COLOR_GROUND, _FOG_COLOR_SKY, clamp(hp.y / 1000, -1., 1.)) + (m.dE < MAX_DIS ? 0 : sunboxCol * _SUN_COLOR);
+
+    //======[EARLY EXIT]======//
+    if (m.dE >= MAX_DIS) { // if max distance is reached, return fog
+        r.color = fogColor;
+        return r;
+    }
+
+    //======|Fog|======//
+    float F = GetFog(m.dE, MAX_DIS, 10);
+    float3 FOG = F * fogColor;
+
+    //======|BLINN PHONG INITS|======//
+    float3 n, ALBEDO;
+    float D, S, A;
+
+    if (m.hasHitPoly)
+    {
+        n = GetPolyNormal(id, width, height);
+        ALBEDO = backgroundCol;
+    }
+    else {
+        n = GetNormal(hp, SLOPE_EPS);
+        ALBEDO = GetAlbedo(hp);
+    }
+
+    float dotNL = dot(n, _LightDir);
+    D = GetDiffuse(hp, dotNL) * Di;
+    S = GetSpecular(2., D) * Si;
+    A = AO_ON ? GetAmbientOcclusion(hp, n, 5., 2) * Ai : Ai;
+
+    if (SHADOWS_ON) {
+        //======|Shadows|======//
+        float4 lightCamPos = mul(_LightWorldToCamMat, float4(hp, 1));
+        float3 lightCamPosHomogeneous = lightCamPos.xyz / lightCamPos.w;
+        lightCamPosHomogeneous.xy = lightCamPosHomogeneous * 0.5 / _LightCamSize + 0.5;
+        lightCamPosHomogeneous.z = -lightCamPosHomogeneous.z - _LightNear;
+
+        if (lightCamPosHomogeneous.x < 1 && lightCamPosHomogeneous.y < 1 &&
+            lightCamPosHomogeneous.x > 0 && lightCamPosHomogeneous.y > 0 &&
+            lightCamPosHomogeneous.z <= _LightFar) {
+            float shadowSample = GetDepthTextureSample(lightCamPosHomogeneous.xy);
+            //float bias = max(_LightCamSize * (1.0 - dotNL), 0.0001);
+            float bias = .4;
+            if (lightCamPosHomogeneous.z - bias > shadowSample) D *= 0.; // poly shadow
+        }
+        if (isShadow(hp, _LightDir)) D *= 0.; // raymarch shadow
+    }
+
+    //======[FINAL EXIT]======//
+    r.color = ALBEDO * (A + D + S) * (1 - F) + FOG;
+    return r;
+}
+
+[numthreads(8, 8, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    //======|COL INIT|======//
+    float4 col = float4(0, 0, 0, 1);
+
+    //======|UI Check|======//
+    col.rgb = UIRendered[id.xy];
+
+    //======|CAMERA SETUP|======//
+    uint width, height;
+    Result.GetDimensions(width, height);
+    float2 uv = id.xy / float2(width, height) * 2 - 1;
+
+    float3 ro = mul(_camToWorldMat, float4(0, 0, 0, 1)).xyz;
+    float3 rd = mul(_camInvProjMat, float4(uv, 0, 1.)).xyz;
+    rd = mul(_camToWorldMat, float4(rd, 0)).xyz;
+    //======|GETTING DEPTH|======//
+    float depth = LinearEyeDepth(_CameraDepthTexture[id.xy]);
+
+    if (col.r < 0.001 && col.g < 0.001 && col.b < 0.001) { // if no UI otherwise skip raymarch process
+        //======|PIXEL COLORING|======//
+        col.rgb = UnityRendered[id.xy];
+
+        Render render = GetRayMarchRender(ConeMarchData[id.xy / finalPixelDiv], id, width, height, ro, rd, depth, col.rgb, SkyboxRendered[id.xy]);
+        col.rgb = render.color;
+        //col.rgb += ConeMarchData[id.xy / finalPixelDiv]/2000.;
+
+        //======|DEPTH BUFFER SETTING|======//
+        DepthBuffer[id.xy] = render.depth;
+    }
+    else { // UI found, update depthBuffer for VFX
+        DepthBuffer[id.xy] = 0.;
+    }
+
+    //======[DRAWING RESULT]======//
+    Result[id.xy] = col;
+}

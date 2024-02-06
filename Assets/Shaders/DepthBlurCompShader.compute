@@ -1,0 +1,48 @@
+#pragma kernel CSMain
+
+RWTexture2D<float4> Result;
+RWTexture2D<float> DepthBuffer;
+uniform int RADIUS;
+
+[numthreads(8, 8, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    int width, height;
+    Result.GetDimensions(width, height);
+
+    float4 final = float4(0, 0, 0, 1); 
+    float4 ResSample = Result[id.xy];
+
+    uint2 offset;
+    float weight, totalWeight;
+
+    float rad2 = float(RADIUS) * float(RADIUS);
+
+    // Apply Gaussian blur
+    for (int i = -RADIUS; i <= RADIUS; i++)
+    {
+        for (int j = -RADIUS; j <= RADIUS; j++)
+        {
+            int2 texCoord = int2(id.x + i, id.y + j);
+
+            if (texCoord.x >= 0 && texCoord.x < width && texCoord.y >= 0 && texCoord.y < height)
+            {
+                float2 offset = float2(i, j);
+
+                float weight = exp(-(offset.x * offset.x + offset.y * offset.y) / (2.0 * rad2));
+
+                final += Result[texCoord] * weight;
+                totalWeight += weight;
+            }
+        }
+    }
+
+    // Normalize the color by the total weight
+    if (totalWeight > 0.0)
+        final /= totalWeight;
+
+    // Lerp between current sample and blurred by depth value.
+    final = lerp(ResSample, final, saturate(DepthBuffer[id.xy] / 4000.));
+
+    Result[id.xy] = final;
+}

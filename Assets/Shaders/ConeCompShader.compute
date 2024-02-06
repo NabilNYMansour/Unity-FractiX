@@ -1,0 +1,53 @@
+#pragma kernel CSMain
+
+//---------------Camera uniforms---------------//
+uniform float _camTanFov;
+uniform float _camAspect;
+uniform float3 _camForward;
+
+uniform float3 _camPos;
+uniform float4x4 _camProjMat;
+uniform float4x4 _camInvProjMat;
+uniform float4x4 _camWorldToCamMat;
+uniform float4x4 _camToWorldMat;
+
+//---------------Settings uniforms---------------//
+uniform float MAX_STEPS;
+uniform float MAX_DIS;
+uniform float HIT_EPS;
+uniform float SLOPE_EPS;
+
+//---------------Includes---------------//
+#include "UnityCG.cginc"
+#include "marcher.hlsl"
+
+//---------------Declarations and shader uniforms---------------//
+RWTexture2D<float> ConeMarchDataIn;
+RWTexture2D<float> ConeMarchDataOut;
+Texture2D<half4> _CameraDepthTexture;
+uniform float subdiv;
+uniform float pixelDiv;
+uniform float prevPassRatio;
+uniform bool isFirst;
+
+[numthreads(8, 8, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    uint width, height;
+    ConeMarchDataOut.GetDimensions(width, height);
+    float2 uv = id.xy / float2(width, height) * 2 - 1;
+
+    float3 ro = mul(_camToWorldMat, float4(0, 0, 0, 1)).xyz;
+    float3 rd = mul(_camInvProjMat, float4(uv, 0, 1.)).xyz;
+    rd = mul(_camToWorldMat, float4(rd, 0)).xyz;
+
+    float depth = LinearEyeDepth(_CameraDepthTexture[id.xy * pixelDiv]);
+    depth = depth * length(rd) + HIT_EPS * 2.;
+
+    float disMarched = 0;
+    if (!isFirst) {
+        disMarched = ConeMarchDataIn[id.xy / prevPassRatio];
+    }
+
+    ConeMarchDataOut[id.xy] = ConeMarch(subdiv, disMarched, ro, normalize(rd), depth, MAX_STEPS, 1).dE;
+}
