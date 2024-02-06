@@ -37,6 +37,9 @@ uniform float RAYMARCH_DETAIL;
 uniform bool SHADOWS_ON;
 uniform bool AO_ON;
 
+//---------------Scene uniforms---------------//
+uniform int _scene;
+
 //---------------Buffers---------------//
 RWTexture2D<float4> Result;
 

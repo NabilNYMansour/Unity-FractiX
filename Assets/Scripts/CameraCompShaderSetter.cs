@@ -7,11 +7,11 @@ public class CameraCompShaderSetter : MonoBehaviour
 {
     //======|Public params|======//
     [Header("Compute Shaders")]
-    public ComputeShader rayMarchShader; // check "Shaders/RayCompShader.compute"
-    public ComputeShader coneMarchShader; // check "Shaders/ConeCompShader.compute"
-    public ComputeShader fxaaShader; // check "Shaders/FXAACompShader.compute"
-    public ComputeShader depthBlurShader; // check "Shaders/DepthBlurCompShader.compute"
-    public ComputeShader vfxShader; // check "Shaders/VFXCompShader.compute"
+    public ComputeShader rayMarchShader; // see "Shaders/RayCompShader.compute"
+    public ComputeShader coneMarchShader; // see "Shaders/ConeCompShader.compute"
+    public ComputeShader fxaaShader; // see "Shaders/FXAACompShader.compute"
+    public ComputeShader depthBlurShader; // see "Shaders/DepthBlurCompShader.compute"
+    public ComputeShader vfxShader; // see "Shaders/VFXCompShader.compute"
 
     [Header("Cameras")]
     public Light dirLight;
@@ -46,6 +46,9 @@ public class CameraCompShaderSetter : MonoBehaviour
     [Range(1f, 10f)]
     public int depthBlurRadius = 3;
 
+    [Header("Scene number")]
+    public int scene = 0; // for changes in the scene
+
     //======|RenderTextures|======//
     private RenderTexture target;
     private RenderTexture DepthBuffer;
@@ -68,7 +71,7 @@ public class CameraCompShaderSetter : MonoBehaviour
     /// <summary>
     /// Initializes a 2D render texture given width, height and format of the desired texture.
     /// </summary>
-    RenderTexture initBuffer(float width, float height, RenderTextureFormat format)
+    RenderTexture initBuffer(float width, float height, RenderTextureFormat format) // float input to handle cone marching divisions
     {
         RenderTexture data = new RenderTexture((int)width, (int)height, 0, format, RenderTextureReadWrite.Linear);
         data.enableRandomWrite = true;
@@ -100,6 +103,9 @@ public class CameraCompShaderSetter : MonoBehaviour
         coneMarchShader.SetFloat("MAX_DIS", MaxDis);
         coneMarchShader.SetFloat("HIT_EPS", HitEps);
         coneMarchShader.SetFloat("SLOPE_EPS", SlopeEps);
+
+        //======|Scene uniform setter|======//
+        coneMarchShader.SetInt("_scene", scene);
 
         //======|Passes|======//
         for (int i = 0; i < subdivisions.Length; i++) // For each pass
@@ -187,6 +193,9 @@ public class CameraCompShaderSetter : MonoBehaviour
         rayMarchShader.SetVector("_FOG_COLOR_SKY", fogColorSky);
         rayMarchShader.SetVector("_SUN_COLOR", sunColor);
 
+        //======|Scene uniform setter|======//
+        rayMarchShader.SetInt("_scene", scene);
+
         //======|Dispach|======//
         rayMarchShader.Dispatch(0, shaderThreadGroupsX, shaderThreadGroupsY, 1);
     }
@@ -251,6 +260,9 @@ public class CameraCompShaderSetter : MonoBehaviour
         lightCam.depthTextureMode |= DepthTextureMode.Depth;
         skyboxCam.targetTexture = skyboxRender;
         uiCam.targetTexture = uiRender;
+
+        // Match polygonal rendering distance to raymarched rendering max distance
+        cam.farClipPlane = MaxDis + 1;
     }
 
     void OnRenderImage(RenderTexture source, RenderTexture destination)

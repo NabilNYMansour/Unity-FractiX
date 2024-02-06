@@ -17,6 +17,9 @@ uniform float MAX_DIS;
 uniform float HIT_EPS;
 uniform float SLOPE_EPS;
 
+//---------------Scene uniforms---------------//
+uniform int _scene; // Use this uniform to do changes based on the scene number.
+
 //---------------Includes---------------//
 #include "UnityCG.cginc"
 #include "marcher.hlsl"
