@@ -67,7 +67,6 @@ public class CameraCompShaderSetter : MonoBehaviour
     private int shaderThreadGroupsX;
     private int shaderThreadGroupsY;
 
-
     /// <summary>
     /// Initializes a 2D render texture given width, height and format of the desired texture.
     /// </summary>
@@ -77,6 +76,34 @@ public class CameraCompShaderSetter : MonoBehaviour
         data.enableRandomWrite = true;
         data.Create();
         return data;
+    }
+
+    /// <summary>
+    /// Initializes all the buffers that will be used in cone marching and in ray marching
+    /// </summary>
+    void InitAllTextures()
+    {
+        cam = GetComponent<Camera>();
+        cam.depthTextureMode |= DepthTextureMode.Depth;
+
+        //======|Init textures|======//
+        target = initBuffer(cam.pixelWidth, cam.pixelHeight, RenderTextureFormat.ARGBFloat);
+        uiRender = initBuffer(cam.pixelWidth, cam.pixelHeight, RenderTextureFormat.ARGBFloat);
+        skyboxRender = initBuffer(cam.pixelWidth, cam.pixelHeight, RenderTextureFormat.RFloat);
+        DepthBuffer = initBuffer(cam.pixelWidth, cam.pixelHeight, RenderTextureFormat.RFloat);
+
+        coneMarchDataInArr = new RenderTexture[conePassPixelDiv.Length];
+        coneMarchDataOutArr = new RenderTexture[conePassPixelDiv.Length];
+
+        float pixelDiv, width, height;
+        for (int i = 0; i < conePassPixelDiv.Length; i++)
+        {
+            pixelDiv = conePassPixelDiv[i];
+            width = cam.pixelWidth / pixelDiv;
+            height = cam.pixelHeight / pixelDiv;
+            coneMarchDataInArr[i] = initBuffer(width, height, RenderTextureFormat.RFloat);
+            coneMarchDataOutArr[i] = initBuffer(width, height, RenderTextureFormat.RFloat);
+        }
     }
 
     /// <summary>
@@ -232,27 +259,7 @@ public class CameraCompShaderSetter : MonoBehaviour
 
     void OnEnable()
     {
-        cam = GetComponent<Camera>();
-        cam.depthTextureMode |= DepthTextureMode.Depth;
-
-        //======|Init textures|======//
-        target = initBuffer(cam.pixelWidth, cam.pixelHeight, RenderTextureFormat.ARGBFloat);
-        uiRender = initBuffer(cam.pixelWidth, cam.pixelHeight, RenderTextureFormat.ARGBFloat);
-        skyboxRender = initBuffer(cam.pixelWidth, cam.pixelHeight, RenderTextureFormat.RFloat);
-        DepthBuffer = initBuffer(cam.pixelWidth, cam.pixelHeight, RenderTextureFormat.RFloat);
-
-        coneMarchDataInArr = new RenderTexture[conePassPixelDiv.Length];
-        coneMarchDataOutArr = new RenderTexture[conePassPixelDiv.Length];
-
-        float pixelDiv, width, height;
-        for (int i = 0; i < conePassPixelDiv.Length; i++)
-        {
-            pixelDiv = conePassPixelDiv[i];
-            width = cam.pixelWidth / pixelDiv;
-            height = cam.pixelHeight / pixelDiv;
-            coneMarchDataInArr[i] = initBuffer(width, height, RenderTextureFormat.RFloat);
-            coneMarchDataOutArr[i] = initBuffer(width, height, RenderTextureFormat.RFloat);
-        }
+        InitAllTextures();
     }
 
     private void Start()
@@ -269,21 +276,29 @@ public class CameraCompShaderSetter : MonoBehaviour
     {
         if (cam != null && lightCam != null && lightCam.activeTexture != null)
         {
-            //======|Get threads size|======//
-            shaderThreadGroupsX = Mathf.CeilToInt(cam.pixelWidth / 8.0f);
-            shaderThreadGroupsY = Mathf.CeilToInt(cam.pixelHeight / 8.0f);
+            if (coneMarchDataInArr[0] == null) // handles editor error
+            {
+                InitAllTextures();
+                Graphics.Blit(source, destination);
+            }
+            else
+            {
+                //======|Get threads size|======//
+                shaderThreadGroupsX = Mathf.CeilToInt(cam.pixelWidth / 8.0f);
+                shaderThreadGroupsY = Mathf.CeilToInt(cam.pixelHeight / 8.0f);
 
-            //======|Marching|======//
-            ConeMarch();
-            RunMarcher();
+                //======|Marching|======//
+                ConeMarch();
+                RunMarcher();
 
-            //======|VFX|======//
-            if (fxaaOn) FXAAVFX();
-            if (depthBlurOn) DepthBlurVFX();
-            VFX();
+                //======|VFX|======//
+                if (fxaaOn) FXAAVFX();
+                if (depthBlurOn) DepthBlurVFX();
+                VFX();
 
-            //======|Blit to frame buffer|======//
-            Graphics.Blit(target, destination);
+                //======|Blit to frame buffer|======//
+                Graphics.Blit(target, destination);
+            }
         }
         else
         {
@@ -304,5 +319,10 @@ public class CameraCompShaderSetter : MonoBehaviour
             coneMarchDataInArr[i].Release();
             coneMarchDataOutArr[i].Release();
         }
+    }
+
+    private void Update()
+    {
+
     }
 }

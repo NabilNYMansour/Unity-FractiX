@@ -11,7 +11,7 @@ public class BoidController : MonoBehaviour
     public float boidRotationSpeed = 0.05f;
 
     [Header("Spawn and death particle system")]
-    public ParticleSystem particle;
+    public ParticleSystem particlesPrefab;
 
     [Header("Boid behaviour params")]
     public Vector3 combinedBoidRule = Vector3.zero;
@@ -30,7 +30,7 @@ public class BoidController : MonoBehaviour
     /// <param name="scale"></param>
     void EmitParticles(float scale)
     {
-        ParticleSystem particles = Instantiate(particle, transform.position, transform.rotation);
+        ParticleSystem particles = Instantiate(particlesPrefab, transform.position, transform.rotation);
         particles.transform.localScale = transform.localScale * scale;
         particles.Play();
         Destroy(particles.gameObject, particles.main.duration);

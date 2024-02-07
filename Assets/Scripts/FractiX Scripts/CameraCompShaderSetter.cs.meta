@@ -1,0 +1,20 @@
+fileFormatVersion: 2
+guid: bfb071dafc2460847b9dbc1583178e94
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - rayMarchShader: {fileID: 7200000, guid: fcf1547d818cc2b4f88ee8f827b3e155, type: 3}
+  - coneMarchShader: {fileID: 7200000, guid: 0a0413d3f9c5b5b4aaf9cfcd78dec517, type: 3}
+  - fxaaShader: {fileID: 7200000, guid: 385c6eeffff9b3e4ba0cf57f54007385, type: 3}
+  - depthBlurShader: {fileID: 7200000, guid: ef12f3b970591c34cab6794a1e42440d, type: 3}
+  - vfxShader: {fileID: 7200000, guid: 318828fc7df20654698b45735efd5012, type: 3}
+  - dirLight: {instanceID: 0}
+  - lightCam: {instanceID: 0}
+  - uiCam: {instanceID: 0}
+  - skyboxCam: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

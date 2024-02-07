@@ -22,7 +22,7 @@ uniform int _scene; // Use this uniform to do changes based on the scene number.
 
 //---------------Includes---------------//
 #include "UnityCG.cginc"
-#include "marcher.hlsl"
+#include "EngineShaders/marcher.hlsl"
 
 //---------------Declarations and shader uniforms---------------//
 RWTexture2D<float> ConeMarchDataIn;

@@ -1,8 +1,5 @@
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.UIElements;
 
-// for comp shader
 /// <summary>
 /// Datum will be the struct that is used to communicate with the compute shader. The buffer will be read/write so
 /// when reading the data, the gpu will expect an input of position for the first vector, and the forward vector of the boid

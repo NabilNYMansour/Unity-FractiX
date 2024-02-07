@@ -17,7 +17,7 @@ uniform int _scene;
 
 //---------------Includes---------------//
 #include "UnityCG.cginc"
-#include "hit.hlsl"
+#include "EngineShaders/hit.hlsl"
 
 //---------------Helper---------------//
 // Will check if the given point is inside a cone.

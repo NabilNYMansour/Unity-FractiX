@@ -31,16 +31,20 @@ float3 apollonianHillsAlbedo(float3 pos) {
 ///////////////////////////////////////////////////////////////
 // Shadows demo SDF and Albedo (Scene = 1)
 float shadowDemoSDF(float3 pos) {
-	float dBox = de_box3(pos - float3(0, 2, 0), 1);
-	dBox = min(dBox, de_box3(pos - float3(0, 6, 0), 0.2));
-	return min(dBox, pos.y);
+	float d;
+	float dBox1 = de_box3(pos - float3(0, 2, 0), 1);
+	float dBox2 = de_box3(pos - float3(0, 6, 0), 0.2);
+	d = min(dBox1, dBox2);
+	d = min(d, pos.y);
+	return d;
 }
 float3 shadowDemoAlbedo(float3 pos) {
-	float dBox = de_box3(pos - float3(0, 2, 0), 1);
-	if (dBox < pos.y) {
-		if (dBox < de_box3(pos - float3(0, 6, 0), 0.2)) return float3(0.8, 0.5, 0.4);
+	float d;
+	float dBox1 = de_box3(pos - float3(0, 2, 0), 1);
+	float dBox2 = de_box3(pos - float3(0, 6, 0), 0.2);
+	if (min(dBox1, dBox2) < pos.y) {
+		if (dBox1 < dBox2) return float3(0.8, 0.5, 0.4);
 		else return float3(0.2, 0.8, 0.6);
-
 	}
 	else {
 		float chessboard = frac((floor(pos.x) + floor(pos.z)) * 0.5);
@@ -81,6 +85,21 @@ float3 foldedReefAlbedo(float3 pos)
 	col = lerp(col, normalize(float3(col.r, p.w / 2, p.w)), saturate(p.w));
 	return col;
 }
+///////////////////////////////////////////////////////////////
+// Collisions demo SDF and Albedo (Scene = 3)
+float collisionsDemoSDF(float3 pos) {
+	float d;
+	float dBox1 = de_box3(pos - float3(5, 1, 0), float3(1, 5, 3));
+	float dBox2 = de_box3(pos - float3(-5, 1, 0), float3(1, 5, 3));
+	d = min(dBox1, dBox2);
+	d = min(d, pos.y);
+	return d;
+}
+float3 collisionsDemoAlbedo(float3 pos) {
+	float chessboard = frac((floor(pos.x) + floor(pos.y) + floor(pos.z)) * 0.5);
+	float3 col = chessboard > 0 ? float3(0.1, 0.5, 0.6) : float3(1, 0.5, 0.1);
+	return col;
+}
 
 //---------------Main SDF definitions---------------//
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -94,8 +113,10 @@ float GetDis(float3 pos) {
 		return apollonianHillsSDF(pos);
 	case 1:
 		return shadowDemoSDF(pos);
-	default:
+	case 2:
 		return foldedReefSDF(pos);
+	default:
+		return collisionsDemoSDF(pos);
 	}
 }
 float3 GetAlbedo(float3 pos) {
@@ -104,10 +125,11 @@ float3 GetAlbedo(float3 pos) {
 		return apollonianHillsAlbedo(pos);
 	case 1:
 		return shadowDemoAlbedo(pos);
-	default:
+	case 2:
 		return foldedReefAlbedo(pos);
+	default:
+		return collisionsDemoAlbedo(pos);
 	}
-
 }
 
 //---------------Get normal of SDF---------------//

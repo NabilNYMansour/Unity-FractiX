@@ -132,9 +132,7 @@ MonoBehaviour:
   manager: {fileID: 0}
   boidMovementSpeed: 10
   boidRotationSpeed: 0.05
-  collectedPointsIfMengerite: 1
-  collectionSoundPitch: 1
-  particle: {fileID: 2973925019425072968, guid: bfcfb2989f7d26048a25fce81bce02cc, type: 3}
+  particlesPrefab: {fileID: 2973925019425072968, guid: bfcfb2989f7d26048a25fce81bce02cc, type: 3}
   combinedBoidRule: {x: 0, y: 0, z: 0}
   distanceToCamera: 1e+20
   terrainDistance: 1e+20

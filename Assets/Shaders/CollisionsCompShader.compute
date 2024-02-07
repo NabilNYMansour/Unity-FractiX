@@ -1,0 +1,31 @@
+//---------------Kernal init---------------//
+#pragma kernel CSMain
+
+//---------------Struct definition---------------//
+struct SphereColliderDatum
+{
+    float3 position;
+    float radius;
+    float isColliding;
+};
+
+//---------------Uniforms and buffers---------------//
+RWStructuredBuffer<SphereColliderDatum> data;
+uniform int _scene;
+
+//---------------Includes---------------//
+#include "UnityCG.cginc"
+#include "EngineShaders/hit.hlsl"
+
+[numthreads(64,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    //======|Current datum values|======//
+    SphereColliderDatum currCollider = data[id.x];
+
+    //======|Update collision boolean|======//
+    currCollider.isColliding = GetDis(currCollider.position) < currCollider.radius ? 1. : -1.;
+
+    //======|Update the buffer|======//
+    data[id.x] = currCollider;
+}
