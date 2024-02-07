@@ -1,0 +1,119 @@
+//---------------Kernal init---------------//
+#pragma kernel CSMain
+
+//---------------Struct definition---------------//
+struct Datum {
+    float3 fstVector; // position for input, combined rule for output
+    float3 sndVector; // forward vector for input, boundary vector for output
+};
+
+//---------------Uniforms and buffers---------------//
+RWStructuredBuffer<Datum> data;
+
+uniform uint _dataLength;
+uniform float _viewAngle;
+uniform float _viewDistance;
+uniform int _scene;
+
+//---------------Includes---------------//
+#include "UnityCG.cginc"
+#include "hit.hlsl"
+
+//---------------Helper---------------//
+// Will check if the given point is inside a cone.
+bool IsWithinCone(float3 currPos, float3 currFwd, float3 targetPosition, float coneAngle, float coneLength) {
+    float3 toTarget = targetPosition - currPos;
+
+    float3 forwardDir = normalize(currFwd);
+    float3 toTargetDir = normalize(toTarget);
+
+    float dotProduct = dot(forwardDir, toTargetDir);
+
+    float angleRadians = acos(dotProduct);
+
+    float coneAngleRadians = radians(coneAngle);
+
+    return (angleRadians <= coneAngleRadians / 2) && length(toTarget) <= coneLength;
+}
+
+[numthreads(10, 1, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    //======|Desired boid vectors and values|======//
+    float3 separationVector = float3(0, 0, 0);
+    float3 alignmentVector = float3(0, 0, 0);
+    float3 cohesionVector = float3(0, 0, 0);
+
+    uint cohesionBoids = 0;
+    uint boidsSensed = 0;
+
+    //======|Auxilary values|======//
+    float3 childPos;
+    float3 childFwd;
+
+    //======|Seperation declarations|======//
+    float3 separationDirection;
+    float seperationDistance;
+    float separationWeight;
+
+    //======|Current boid values|======//
+    Datum currDatum = data[id.x];
+    float3 currPos = currDatum.fstVector;
+    float3 currFwd = currDatum.sndVector;
+
+    //======|Main loop to check all boids|======//
+    for (uint i = 0; i < _dataLength; ++i) // loop through all the boids
+    {
+        // get iterated boid values
+        childPos = data[i].fstVector; 
+        childFwd = data[i].sndVector;
+
+        // check if the iterated boid is within the cone of vision of this boid
+        bool withinCone = IsWithinCone(currPos, currFwd, childPos, _viewAngle, _viewDistance);
+        if (i != id.x && withinCone) // if the iterated boid is not the current boid and is within the cone of vision of this boid.
+        {
+            // Calculate seperation
+            if (length(currPos - childPos) < _viewDistance / 4) {
+                separationDirection = currPos - childPos;
+                seperationDistance = length(separationDirection);
+                separationWeight = 1.0f - seperationDistance / _viewDistance;
+                separationVector += normalize(separationDirection) * separationWeight;
+            }
+            else { // calculate cohesion
+                cohesionVector += childPos;
+                cohesionBoids++;
+            }
+            alignmentVector += childFwd; // calcuate alignment
+
+            boidsSensed++; // increase the number of boids sensed
+        }
+    }
+
+    // Finalizing the calcuations
+    if (boidsSensed > 1)
+    {
+        alignmentVector /= boidsSensed;
+    }
+
+    if (cohesionBoids > 1) {
+        cohesionVector /= cohesionBoids;
+        cohesionVector = cohesionVector - currPos;
+    }
+
+    //======|Desired vectors normalizations|======//
+    if (length(separationVector) > 0) {
+        separationVector = normalize(separationVector);
+    }
+    if (length(alignmentVector) > 0) {
+        alignmentVector = normalize(alignmentVector);
+    }
+    if (length(cohesionVector) > 0) {
+        cohesionVector = normalize(cohesionVector);
+    }
+
+    //======|Update the buffer|======//
+    currDatum.fstVector = separationVector + alignmentVector + cohesionVector;
+    currDatum.sndVector = float3(0, GetDis(currPos), boidsSensed); // ignoring the crater
+
+    data[id.x] = currDatum;
+}
