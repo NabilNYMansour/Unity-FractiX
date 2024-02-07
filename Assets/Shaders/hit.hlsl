@@ -38,8 +38,8 @@ float shadowDemoSDF(float3 pos) {
 float3 shadowDemoAlbedo(float3 pos) {
 	float dBox = de_box3(pos - float3(0, 2, 0), 1);
 	if (dBox < pos.y) {
-		if (dBox < de_box3(pos - float3(0, 6, 0), 0.2)) return float3(0.2, 0.5, 0.8);
-		else return float3(0.6, 0.1, 0.8);
+		if (dBox < de_box3(pos - float3(0, 6, 0), 0.2)) return float3(0.8, 0.5, 0.4);
+		else return float3(0.2, 0.8, 0.6);
 
 	}
 	else {
@@ -83,11 +83,11 @@ float3 foldedReefAlbedo(float3 pos)
 }
 
 //---------------Main SDF definitions---------------//
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// NOTE: This is where the fractal is defined. Change GetDis and GetAlbedo in order to change the fractal.
 ///		  See above in the "Constructions" section for examples on how fractals and scenes are generally made.
 ///		  Also, use _scene to change between the scenes you would want to make.
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 float GetDis(float3 pos) {
 	switch (_scene) {
 	case 0:
