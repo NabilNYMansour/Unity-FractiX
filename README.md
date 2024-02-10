@@ -1,2 +1,1 @@
-# Unity-FractiX
- A Fractal rendering engine written as an post-effect to the Unity rendering pipeline.
+![FractiX](https://github.com/NabilNYMansour/Unity-FractiX/assets/56453977/1b1bce7e-f13f-4823-a481-0a853e70ff82)
