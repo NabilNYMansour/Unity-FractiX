@@ -2,8 +2,11 @@ using UnityEngine;
 
 public class SDFSphereCollider : MonoBehaviour
 {
+    [HideInInspector]
     public bool enteredCollisionWithSDF;
+    [HideInInspector]
     public bool isCollidingWithSDF;
+    [HideInInspector]
     public bool exitedCollisionWithSDF;
     public float radius;
 
