@@ -1,6 +1,3 @@
-
-
-# WIP
 ![FractiX](https://github.com/NabilNYMansour/Unity-FractiX/assets/56453977/c8f524e6-a74d-4488-9940-7acbc1d8097e)
 
 # Intro
@@ -8,12 +5,25 @@
 **FractiX** is an open-source Cone marching/Ray marching rendering engine written as an post-effect to the Unity rendering pipeline and made for the rendering of fractals.
 
 # Table of Contents
-1. [Features](#features)
-	a. [Current features](#current-features) 
-2. [Install](#install)
-3. [Documentation](#documentation)
-4. [Demos](#demos)
-
+- [Features](#features)
+	- [Current features](#current-features) 
+	- [Potential future features](#potential-future-features)
+- [Install](#install)
+- [Documentation](#documentation)
+	- [Shaders](#shaders)
+		- [Explanation](#explanation)
+		- [Example Use](#example-use)
+	- [Camera Setup](#camera-setup)
+	- [Collision Components and Scripts](#collision-components-and-scripts)
+		- [Explanation](#explanation-1)
+- [Demos](#demos)
+	- [FRACTAL GLIDE](#fractal-glide)
+	- [Boids simulation](#boids-simulation)
+	- [Collisions demonstration](#collisions-demonstration)
+	- [Moving fractal](#moving-fractal)
+	- [Polygonal shadows demo](#polygonal-shadows-demo)
+- [Final notes](#final-notes) 
+	
 ## Features
 ### Current features:
 - **FractiX** allows for the efficient rendering of any type of SDFs which permits the rendering of fractals.
