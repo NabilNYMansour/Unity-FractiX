@@ -47,6 +47,7 @@
 ## Documentation
 ### Shaders
 These are shaders that include the necessary logic for all the calculations of the SDFs. The main file that is of interest here is `hit.hlsl`
+
 ![hit.hlsl](https://github.com/NabilNYMansour/Unity-FractiX/assets/56453977/78b5decb-4231-4c61-b202-beddb043e16a)
 
 Inside this shader, the main two functions that you would need to modify are `GetDis` and `GetAlbedo`. 
