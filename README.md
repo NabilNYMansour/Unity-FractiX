@@ -119,7 +119,7 @@ For identifying collisions, there are two main scripts: `SDFCollisionsManager` a
 
 - `SDFSphereCollider`: This is the main collider for a game-object. You will only require to define a radius for it.
 
-**Please take a look at the [Collision Demo](#CollisionDemo) scene in order to see how collisions are done in more details.**
+**Please take a look at the [Collision Demo](#CollisionDemo) scene in order to see how collisions are done in more detail.**
 
 **NOTE**: as of now, only a sphere collider is available. I don't necessarily plan to make other colliders but that is something that can be expanded on.
 
@@ -148,7 +148,7 @@ The following demos showcase use cases for this engine and how it is being utili
 ## Final notes
 This project has been the work of almost 3 years of learning how to program with shaders. I hope that you may find it educational and useful as all the engine code is available here. If you wish to support me in any way, you can simply purchuse [FRACTAL GLIDE](https://store.steampowered.com/app/2565200/Fractal_Glide/) and, hopefully, enjoy it.
 
-You can also contribute into this project if you wish to by making pull requests and what not.
+You can also contribute to this project if you wish to by making pull requests and what not.
 
 If you need further help, you can try to contact me through the various contact links I have on my [website](https://nabilmansour.com/).
 
