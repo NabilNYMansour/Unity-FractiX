@@ -79,6 +79,7 @@ The rest of the shaders are used for rendering and/or doing the logic for the co
 
 ### Camera Setup
 In order to use the rendering engine, delete the default camera and import the `Cameras and Light` prefab to your scene
+
 ![Prefab](https://github.com/NabilNYMansour/Unity-FractiX/assets/56453977/ee4a2b7b-660f-4b78-a102-6ac84628ef7d)
 
 This prefab will hold all the gameo-bjects and scripts that are necessary for the rendering of the SDFs. However, there are some settings that require some attention with the `Main Camera` game object.
